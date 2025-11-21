@@ -1,12 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import Hero from './components/Hero'
-import Filters, { type FiltersState } from './components/Filters'
-import PropertyCard, { type Property } from './components/PropertyCard'
+import Filters from './components/Filters'
+import PropertyCard from './components/PropertyCard'
 
 const backend = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000'
 
 function App() {
-  const [filters, setFilters] = useState<FiltersState>({
+  const [filters, setFilters] = useState({
     q: '',
     min_price: undefined,
     max_price: undefined,
@@ -17,8 +17,8 @@ function App() {
     property_type: ''
   })
   const [loading, setLoading] = useState(false)
-  const [data, setData] = useState<Property[]>([])
-  const [error, setError] = useState<string | null>(null)
+  const [data, setData] = useState([])
+  const [error, setError] = useState(null)
 
   const query = useMemo(() => {
     const params = new URLSearchParams()
@@ -42,8 +42,8 @@ function App() {
       if (!res.ok) throw new Error('Failed to load properties')
       const json = await res.json()
       setData(json)
-    } catch (e: any) {
-      setError(e.message || 'Something went wrong')
+    } catch (e) {
+      setError(e?.message || 'Something went wrong')
     } finally {
       setLoading(false)
     }
