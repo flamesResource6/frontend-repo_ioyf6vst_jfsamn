@@ -1,71 +1,84 @@
+import React, { useEffect, useMemo, useState } from 'react'
+import Hero from './components/Hero'
+import Filters, { type FiltersState } from './components/Filters'
+import PropertyCard, { type Property } from './components/PropertyCard'
+
+const backend = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000'
+
 function App() {
+  const [filters, setFilters] = useState<FiltersState>({
+    q: '',
+    min_price: undefined,
+    max_price: undefined,
+    bedrooms: undefined,
+    bathrooms: undefined,
+    city: '',
+    state: '',
+    property_type: ''
+  })
+  const [loading, setLoading] = useState(false)
+  const [data, setData] = useState<Property[]>([])
+  const [error, setError] = useState<string | null>(null)
+
+  const query = useMemo(() => {
+    const params = new URLSearchParams()
+    if (filters.q) params.set('q', filters.q)
+    if (filters.min_price != null) params.set('min_price', String(filters.min_price))
+    if (filters.max_price != null) params.set('max_price', String(filters.max_price))
+    if (filters.bedrooms != null) params.set('bedrooms', String(filters.bedrooms))
+    if (filters.bathrooms != null) params.set('bathrooms', String(filters.bathrooms))
+    if (filters.city) params.set('city', filters.city)
+    if (filters.state) params.set('state', filters.state)
+    if (filters.property_type) params.set('property_type', filters.property_type)
+    params.set('status', 'sale')
+    return params.toString()
+  }, [filters])
+
+  const load = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      const res = await fetch(`${backend}/properties?${query}`)
+      if (!res.ok) throw new Error('Failed to load properties')
+      const json = await res.json()
+      setData(json)
+    } catch (e: any) {
+      setError(e.message || 'Something went wrong')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-      {/* Subtle pattern overlay */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(59,130,246,0.05),transparent_50%)]"></div>
+    <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-950 to-slate-900 text-white">
+      <Hero />
+      <Filters value={filters} onChange={setFilters} onSearch={load} />
 
-      <div className="relative min-h-screen flex items-center justify-center p-8">
-        <div className="max-w-2xl w-full">
-          {/* Header with Flames icon */}
-          <div className="text-center mb-12">
-            <div className="inline-flex items-center justify-center mb-6">
-              <img
-                src="/flame-icon.svg"
-                alt="Flames"
-                className="w-24 h-24 drop-shadow-[0_0_25px_rgba(59,130,246,0.5)]"
-              />
-            </div>
-
-            <h1 className="text-5xl font-bold text-white mb-4 tracking-tight">
-              Flames Blue
-            </h1>
-
-            <p className="text-xl text-blue-200 mb-6">
-              Build applications through conversation
-            </p>
-          </div>
-
-          {/* Instructions */}
-          <div className="bg-slate-800/50 backdrop-blur-sm border border-blue-500/20 rounded-2xl p-8 shadow-xl mb-6">
-            <div className="flex items-start gap-4 mb-6">
-              <div className="flex-shrink-0 w-8 h-8 bg-blue-500 text-white rounded-lg flex items-center justify-center font-bold">
-                1
-              </div>
-              <div>
-                <h3 className="font-semibold text-white mb-1">Describe your idea</h3>
-                <p className="text-blue-200/80 text-sm">Use the chat panel on the left to tell the AI what you want to build</p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-4 mb-6">
-              <div className="flex-shrink-0 w-8 h-8 bg-blue-500 text-white rounded-lg flex items-center justify-center font-bold">
-                2
-              </div>
-              <div>
-                <h3 className="font-semibold text-white mb-1">Watch it build</h3>
-                <p className="text-blue-200/80 text-sm">Your app will appear in this preview as the AI generates the code</p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-4">
-              <div className="flex-shrink-0 w-8 h-8 bg-blue-500 text-white rounded-lg flex items-center justify-center font-bold">
-                3
-              </div>
-              <div>
-                <h3 className="font-semibold text-white mb-1">Refine and iterate</h3>
-                <p className="text-blue-200/80 text-sm">Continue the conversation to add features and make changes</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Footer */}
-          <div className="text-center">
-            <p className="text-sm text-blue-300/60">
-              No coding required • Just describe what you want
-            </p>
-          </div>
+      <section className="mx-auto mt-10 max-w-6xl px-6">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-white/90">Properties for sale</h2>
+          {loading ? <div className="text-sm text-white/60">Loading…</div> : <div className="text-sm text-white/60">{data.length} results</div>}
         </div>
-      </div>
+
+        {error ? (
+          <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">{error}</div>
+        ) : (
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {data.map((p) => (
+              <PropertyCard key={p.id} data={p} />
+            ))}
+          </div>
+        )}
+      </section>
+
+      <footer className="mx-auto mt-16 max-w-6xl px-6 pb-12 text-xs text-white/50">
+        Pricing shown in currency provided by the listing. Always verify details with the seller or agent.
+      </footer>
     </div>
   )
 }
